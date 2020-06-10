@@ -9,7 +9,6 @@ import com.drofff.checkers.client.enums.MessageType;
 import com.drofff.checkers.client.exception.ValidationException;
 import com.drofff.checkers.client.game.graphics.Board2D;
 import com.drofff.checkers.client.game.graphics.GraphicsContext;
-import com.drofff.checkers.client.game.listener.PieceStepListener;
 import com.drofff.checkers.client.message.SessionMessage;
 import com.drofff.checkers.client.message.TextMessage;
 import com.drofff.checkers.client.service.MessageProcessor;
@@ -104,8 +103,8 @@ public class CheckersGame {
     }
 
     private void registerPieceStepListenerForBoardSide(BoardSide boardSide) {
-        PieceStepListener pieceStepListener = new PieceStepListener(pieceService, boardSide, gameBoard);
-        gameBoard.addMouseListener(pieceStepListener);
+        MovementManager movementManager = new MovementManager(pieceService, boardSide, gameBoard);
+        gameBoard.addMouseListener(movementManager);
     }
 
     private void displayPiecesOfUserAtSide(List<Piece> pieces, String userId, BoardSide userSide) {
@@ -128,13 +127,31 @@ public class CheckersGame {
     }
 
     private void displaySessionUpdate(SessionMessage sessionMessage) {
-        Step step = getRelativeStepFromMessage(sessionMessage);
-        gameBoard.movePieceAtBoardSide(step.getFromPosition(), step.getToPosition(), sessionMessage.getUserSide());
+        if(isNotRemovalMessage(sessionMessage)) {
+            Step step = getRelativeStepFromMessage(sessionMessage);
+            gameBoard.movePieceAtBoardSide(step.getFromPosition(), step.getToPosition(), sessionMessage.getUserSide());
+        } else {
+            Step correctedStep = getCorrectedStep(sessionMessage);
+            gameBoard.clearSquareAtPosition(correctedStep.getFromPosition());
+        }
+    }
+
+    private boolean isNotRemovalMessage(SessionMessage sessionMessage) {
+        return !isRemovalMessage(sessionMessage);
+    }
+
+    private boolean isRemovalMessage(SessionMessage sessionMessage) {
+        return sessionMessage.getStep().isRemoval();
     }
 
     private Step getRelativeStepFromMessage(SessionMessage sessionMessage) {
         BoardSide userSide = sessionMessage.getUserSide();
         return userSide == BLACK ? sessionMessage.getStep() : sessionMessage.getStep().inverse();
+    }
+
+    private Step getCorrectedStep(SessionMessage sessionMessage) {
+        Step step = sessionMessage.getStep();
+        return sessionMessage.getUserSide() == BLACK ? step.inverse() : step;
     }
 
 }

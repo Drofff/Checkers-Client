@@ -1,4 +1,4 @@
-package com.drofff.checkers.client.game.listener;
+package com.drofff.checkers.client.game;
 
 import com.drofff.checkers.client.document.Piece;
 import com.drofff.checkers.client.document.Step;
@@ -14,7 +14,7 @@ import java.util.Optional;
 import static com.drofff.checkers.client.constants.BoardConstants.BORDER_WIDTH;
 import static java.util.Objects.nonNull;
 
-public class PieceStepListener implements MouseListener {
+public class MovementManager implements MouseListener {
 
     private final PieceService pieceService;
     private final BoardSide userSide;
@@ -22,7 +22,7 @@ public class PieceStepListener implements MouseListener {
 
     private Piece.Position fromSquare;
 
-    public PieceStepListener(PieceService pieceService, BoardSide userSide, Board2D gameBoard) {
+    public MovementManager(PieceService pieceService, BoardSide userSide, Board2D gameBoard) {
         this.pieceService = pieceService;
         this.userSide = userSide;
         this.gameBoard = gameBoard;
@@ -33,7 +33,7 @@ public class PieceStepListener implements MouseListener {
         Piece.Position selectedSquare = getSelectedSquarePosition(mouseEvent);
         if(isSelectionOfPieceAtSquare(selectedSquare)) {
             selectSquare(selectedSquare);
-        } else if(isStepToSquare(selectedSquare)) {
+        } else if(isStepToSquare(selectedSquare) || isCaptureEndingAtSquare(selectedSquare)) {
             stepToSquare(selectedSquare);
         }
     }
@@ -69,8 +69,7 @@ public class PieceStepListener implements MouseListener {
 
     private boolean isStepToSquare(Piece.Position square) {
         Piece.Position correctPosition = correctPositionIfNeeded(square);
-        Optional<BoardSide> pieceSideOptional = pieceService.getSideOfPieceAtPositionIfPresent(correctPosition);
-        return !pieceSideOptional.isPresent() && nonNull(fromSquare) && isAllowedStepTo(square);
+        return isValidMoveTo(correctPosition) && isAllowedStepTo(square);
     }
 
     private void stepToSquare(Piece.Position square) {
@@ -81,23 +80,75 @@ public class PieceStepListener implements MouseListener {
         fromSquare = null;
     }
 
-    private Piece.Position correctPositionIfNeeded(Piece.Position position) {
-        return userSide == BoardSide.BLACK ? position.inverse() : position;
-    }
-
     private boolean isAllowedStepTo(Piece.Position destinationSquare) {
-        return hasAllowedRow(destinationSquare) && hasAllowedColumn(destinationSquare) &&
+        return hasAllowedStepRow(destinationSquare) && hasAllowedStepColumn(destinationSquare) &&
                 pieceService.isTurnOfCurrentUser();
     }
 
-    private boolean hasAllowedRow(Piece.Position destinationSquare) {
+    private boolean hasAllowedStepRow(Piece.Position destinationSquare) {
         int allowedRow = fromSquare.getRow() - 1;
         return allowedRow == destinationSquare.getRow();
     }
 
-    private boolean hasAllowedColumn(Piece.Position destinationSquare) {
-        int columnDiff = destinationSquare.getColumn() - fromSquare.getColumn();
-        return Math.abs(columnDiff) == 1;
+    private boolean hasAllowedStepColumn(Piece.Position destinationSquare) {
+        int columnDiff = diff(destinationSquare.getColumn(), fromSquare.getColumn());
+        return columnDiff == 1;
+    }
+
+    private boolean isCaptureEndingAtSquare(Piece.Position square) {
+        Piece.Position correctPosition = correctPositionIfNeeded(square);
+        return pieceService.isTurnOfCurrentUser() && isValidMoveTo(correctPosition) &&
+                isValidCaptureMoveEndingAtSquare(square);
+    }
+
+    private boolean isValidMoveTo(Piece.Position square) {
+        return nonNull(fromSquare) && isEmptySquare(square);
+    }
+
+    private boolean isEmptySquare(Piece.Position square) {
+        Optional<BoardSide> boardSideOptional = pieceService.getSideOfPieceAtPositionIfPresent(square);
+        return !boardSideOptional.isPresent();
+    }
+
+    private boolean isValidCaptureMoveEndingAtSquare(Piece.Position square) {
+        return isAllowedCaptureMoveEndingAtSquare(square) &&
+                doesMoveToSquareCaptureOpponentPiece(square);
+    }
+
+    private boolean isAllowedCaptureMoveEndingAtSquare(Piece.Position position) {
+        int rowDiff = diff(position.getRow(), fromSquare.getRow());
+        int columnDiff = diff(position.getColumn(), fromSquare.getColumn());
+        return rowDiff == columnDiff && rowDiff == 2;
+    }
+
+    private int diff(int num0, int num1) {
+        return Math.abs(num0 - num1);
+    }
+
+    private boolean doesMoveToSquareCaptureOpponentPiece(Piece.Position toSquare) {
+        Piece.Position capturedPosition = getSquareBetweenFromAndTo(toSquare);
+        Piece.Position correctedPosition = correctPositionIfNeeded(capturedPosition);
+        return pieceService.getSideOfPieceAtPositionIfPresent(correctedPosition)
+                .filter(this::isSideOfOpponent)
+                .isPresent();
+    }
+
+    private Piece.Position getSquareBetweenFromAndTo(Piece.Position toSquare) {
+        int columnBetween = avg(fromSquare.getColumn(), toSquare.getColumn());
+        int rowBetween = avg(fromSquare.getRow(), toSquare.getRow());
+        return new Piece.Position(columnBetween, rowBetween);
+    }
+
+    private int avg(int num0, int num1) {
+        return ( num0 + num1 ) / 2;
+    }
+
+    private Piece.Position correctPositionIfNeeded(Piece.Position position) {
+        return userSide == BoardSide.BLACK ? position.inverse() : position;
+    }
+
+    private boolean isSideOfOpponent(BoardSide side) {
+        return !userSide.equals(side);
     }
 
     @Override

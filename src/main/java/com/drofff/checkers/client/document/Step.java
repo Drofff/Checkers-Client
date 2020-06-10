@@ -37,4 +37,8 @@ public class Step {
         return new Step(fromPosition.inverse(), toPosition.inverse());
     }
 
+    public boolean isRemoval() {
+        return toPosition.getColumn() == -1 && toPosition.getRow() == -1;
+    }
+
 }

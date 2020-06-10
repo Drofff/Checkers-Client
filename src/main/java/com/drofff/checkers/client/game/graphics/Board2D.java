@@ -52,17 +52,12 @@ public class Board2D extends Canvas {
         }
     }
 
-    public void displayPieceAtBoardSide(Piece piece, BoardSide boardSide) {
-        Piece.Position piecePosition = piece.getPosition();
-        displayPieceAtPositionOfBoardSide(piecePosition, boardSide);
-    }
-
     public void movePieceAtBoardSide(Piece.Position from, Piece.Position to, BoardSide boardSide) {
         clearSquareAtPosition(from);
         displayPieceAtPositionOfBoardSide(to, boardSide);
     }
 
-    private void clearSquareAtPosition(Piece.Position position) {
+    public void clearSquareAtPosition(Piece.Position position) {
         Graphics graphics = getGraphics();
         graphics.setColor(BROWN);
         fillSquareOfPosition(position.getRow(), position.getColumn(), graphics);
@@ -79,6 +74,11 @@ public class Board2D extends Canvas {
 
     public void unselectSquareAtBoardSide(Piece.Position square, BoardSide boardSide) {
         displayPieceAtPositionOfBoardSide(square, boardSide);
+    }
+
+    public void displayPieceAtBoardSide(Piece piece, BoardSide boardSide) {
+        Piece.Position piecePosition = piece.getPosition();
+        displayPieceAtPositionOfBoardSide(piecePosition, boardSide);
     }
 
     private void displayPieceAtPositionOfBoardSide(Piece.Position piecePosition, BoardSide boardSide) {
