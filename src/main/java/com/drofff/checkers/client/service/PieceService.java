@@ -12,4 +12,6 @@ public interface PieceService {
 
     void movePieceByStep(Step step);
 
+    Boolean isTurnOfCurrentUser();
+
 }

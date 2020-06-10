@@ -29,4 +29,11 @@ public class PieceServiceImpl implements PieceService {
                 .send().subscribe();
     }
 
+    @Override
+    public Boolean isTurnOfCurrentUser() {
+        return rSocketRequester.route("isTurn")
+                .retrieveMono(Boolean.class)
+                .block();
+    }
+
 }

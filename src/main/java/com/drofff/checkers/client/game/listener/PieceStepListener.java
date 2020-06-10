@@ -72,7 +72,8 @@ public class PieceStepListener implements MouseListener {
     }
 
     private boolean isAllowedStepTo(Piece.Position destinationSquare) {
-        return hasAllowedRow(destinationSquare) && hasAllowedColumn(destinationSquare);
+        return hasAllowedRow(destinationSquare) && hasAllowedColumn(destinationSquare) &&
+                pieceService.isTurnOfCurrentUser();
     }
 
     private boolean hasAllowedRow(Piece.Position destinationSquare) {
