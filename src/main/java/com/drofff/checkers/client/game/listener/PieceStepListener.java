@@ -12,7 +12,6 @@ import java.awt.event.MouseListener;
 import java.util.Optional;
 
 import static com.drofff.checkers.client.constants.BoardConstants.BORDER_WIDTH;
-import static com.drofff.checkers.client.enums.BoardSide.BLACK;
 import static java.util.Objects.nonNull;
 
 public class PieceStepListener implements MouseListener {
@@ -33,21 +32,16 @@ public class PieceStepListener implements MouseListener {
     public void mouseClicked(MouseEvent mouseEvent) {
         Piece.Position selectedSquare = getSelectedSquarePosition(mouseEvent);
         if(isSelectionOfPieceAtSquare(selectedSquare)) {
-            unselectPreviousOptionIfNeeded();
-            fromSquare = selectedSquare;
-            gameBoard.selectSquareAtBoardSide(selectedSquare, userSide);
+            selectSquare(selectedSquare);
         } else if(isStepToSquare(selectedSquare)) {
-            pieceService.movePieceByStep(Step.of(fromSquare, selectedSquare));
-            gameBoard.movePieceAtBoardSide(fromSquare, selectedSquare, userSide);
-            fromSquare = null;
+            stepToSquare(selectedSquare);
         }
     }
 
     private Piece.Position getSelectedSquarePosition(MouseEvent mouseEvent) {
         int column = getPositionByCoordinate(mouseEvent.getX());
         int row = getPositionByCoordinate(mouseEvent.getY());
-        Piece.Position selectedSquarePosition = new Piece.Position(column, row);
-        return userSide == BLACK ? selectedSquarePosition.inverse() : selectedSquarePosition;
+        return new Piece.Position(column, row);
     }
 
     private int getPositionByCoordinate(int coordinate) {
@@ -56,8 +50,15 @@ public class PieceStepListener implements MouseListener {
     }
 
     private boolean isSelectionOfPieceAtSquare(Piece.Position square) {
-        Optional<BoardSide> pieceSideOptional = pieceService.getSideOfPieceAtPositionIfPresent(square);
+        Piece.Position correctPosition = correctPositionIfNeeded(square);
+        Optional<BoardSide> pieceSideOptional = pieceService.getSideOfPieceAtPositionIfPresent(correctPosition);
         return pieceSideOptional.isPresent() && pieceSideOptional.get() == userSide;
+    }
+
+    private void selectSquare(Piece.Position square) {
+        unselectPreviousOptionIfNeeded();
+        fromSquare = square;
+        gameBoard.selectSquareAtBoardSide(square, userSide);
     }
 
     private void unselectPreviousOptionIfNeeded() {
@@ -67,8 +68,21 @@ public class PieceStepListener implements MouseListener {
     }
 
     private boolean isStepToSquare(Piece.Position square) {
-        Optional<BoardSide> pieceSideOptional = pieceService.getSideOfPieceAtPositionIfPresent(square);
+        Piece.Position correctPosition = correctPositionIfNeeded(square);
+        Optional<BoardSide> pieceSideOptional = pieceService.getSideOfPieceAtPositionIfPresent(correctPosition);
         return !pieceSideOptional.isPresent() && nonNull(fromSquare) && isAllowedStepTo(square);
+    }
+
+    private void stepToSquare(Piece.Position square) {
+        Piece.Position fromPosition = correctPositionIfNeeded(fromSquare);
+        Piece.Position toPosition = correctPositionIfNeeded(square);
+        pieceService.movePieceByStep(Step.of(fromPosition, toPosition));
+        gameBoard.movePieceAtBoardSide(fromSquare, square, userSide);
+        fromSquare = null;
+    }
+
+    private Piece.Position correctPositionIfNeeded(Piece.Position position) {
+        return userSide == BoardSide.BLACK ? position.inverse() : position;
     }
 
     private boolean isAllowedStepTo(Piece.Position destinationSquare) {

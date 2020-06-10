@@ -33,4 +33,8 @@ public class Step {
         this.toPosition = toPosition;
     }
 
+    public Step inverse() {
+        return new Step(fromPosition.inverse(), toPosition.inverse());
+    }
+
 }

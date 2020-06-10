@@ -2,9 +2,11 @@ package com.drofff.checkers.client.game;
 
 import com.drofff.checkers.client.document.Board;
 import com.drofff.checkers.client.document.Piece;
+import com.drofff.checkers.client.document.Step;
 import com.drofff.checkers.client.dto.SessionDto;
 import com.drofff.checkers.client.enums.BoardSide;
 import com.drofff.checkers.client.enums.MessageType;
+import com.drofff.checkers.client.exception.ValidationException;
 import com.drofff.checkers.client.game.graphics.Board2D;
 import com.drofff.checkers.client.game.graphics.GraphicsContext;
 import com.drofff.checkers.client.game.listener.PieceStepListener;
@@ -26,6 +28,7 @@ import static com.drofff.checkers.client.enums.BoardSide.BLACK;
 import static com.drofff.checkers.client.enums.BoardSide.oppositeSide;
 import static com.drofff.checkers.client.enums.MessageType.INITIAL;
 import static com.drofff.checkers.client.enums.MessageType.UPDATE;
+import static reactor.core.publisher.Mono.error;
 
 public class CheckersGame {
 
@@ -46,7 +49,7 @@ public class CheckersGame {
 
     public Flux<SessionMessage> start(String opponentNickname) {
         initBoard2D();
-        return initSessionWithOpponentHavingNickname(opponentNickname)
+        return getIdOfSessionWithOpponentHavingNickname(opponentNickname)
                 .flatMapMany(this::joinSession)
                 .doOnNext(this::displaySessionMessage);
     }
@@ -54,6 +57,18 @@ public class CheckersGame {
     private void initBoard2D() {
         gameBoard = new Board2D();
         GraphicsContext.addComponent(gameBoard);
+    }
+
+    private Mono<String> getIdOfSessionWithOpponentHavingNickname(String nickname) {
+        return getSessionWithOpponentHavingNickname(nickname)
+                .onErrorResume(e -> initSessionWithOpponentHavingNickname(nickname));
+    }
+
+    private Mono<String> getSessionWithOpponentHavingNickname(String nickname) {
+        return rSocketRequester.route("session.with.{nickname}", nickname)
+                .retrieveMono(TextMessage.class)
+                .flatMap(messageProcessor::processTextMessage)
+                .switchIfEmpty(error(new ValidationException("No session exists")));
     }
 
     private Mono<String> initSessionWithOpponentHavingNickname(String nickname) {
@@ -77,7 +92,7 @@ public class CheckersGame {
         if(sessionMessageType == INITIAL) {
             initSession(sessionMessage);
         } else if(sessionMessageType == UPDATE) {
-            System.out.println("UPDATE RECEIVED");
+            displaySessionUpdate(sessionMessage);
         }
     }
 
@@ -110,6 +125,16 @@ public class CheckersGame {
     private void displayPieceOfUserAtSide(Piece piece, String userId, BoardSide userSide) {
         BoardSide pieceSide = piece.ownerHasId(userId) ? userSide : oppositeSide(userSide);
         gameBoard.displayPieceAtBoardSide(piece, pieceSide);
+    }
+
+    private void displaySessionUpdate(SessionMessage sessionMessage) {
+        Step step = getRelativeStepFromMessage(sessionMessage);
+        gameBoard.movePieceAtBoardSide(step.getFromPosition(), step.getToPosition(), sessionMessage.getUserSide());
+    }
+
+    private Step getRelativeStepFromMessage(SessionMessage sessionMessage) {
+        BoardSide userSide = sessionMessage.getUserSide();
+        return userSide == BLACK ? sessionMessage.getStep() : sessionMessage.getStep().inverse();
     }
 
 }

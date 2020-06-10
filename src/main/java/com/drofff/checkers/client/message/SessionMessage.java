@@ -1,6 +1,7 @@
 package com.drofff.checkers.client.message;
 
 import com.drofff.checkers.client.document.Board;
+import com.drofff.checkers.client.document.Step;
 import com.drofff.checkers.client.enums.BoardSide;
 import com.drofff.checkers.client.enums.MessageType;
 import com.drofff.checkers.client.utils.JsonUtils;
@@ -44,6 +45,11 @@ public class SessionMessage implements Message {
 
     public String getUserId() {
         return payload.get("userId");
+    }
+
+    public Step getStep() {
+        String stepJson = payload.get("step");
+        return JsonUtils.parseValueOfClassFromJson(Step.class, stepJson);
     }
 
 }
