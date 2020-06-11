@@ -10,6 +10,8 @@ import static com.drofff.checkers.client.utils.BoardUtils.getBoardSizeExcludingB
 import static com.drofff.checkers.client.utils.BoardUtils.getSizeOfSquare;
 import static java.awt.Color.BLACK;
 import static java.awt.Color.WHITE;
+import static java.awt.Font.BOLD;
+import static java.awt.Font.MONOSPACED;
 
 public class Board2D extends Canvas {
 
@@ -118,6 +120,43 @@ public class Board2D extends Canvas {
         int innerCircleY = pieceSquare[1] + PIECE_INNER_CIRCLE_OFFSET;
         int innerCircleSize = pieceSquare[2] - 2 * PIECE_INNER_CIRCLE_OFFSET;
         graphics.drawOval(innerCircleX, innerCircleY, innerCircleSize, innerCircleSize);
+    }
+
+    public void displayText(String text) {
+        fillTextBackground();
+        drawText(text);
+    }
+
+    private void fillTextBackground() {
+        int[] backgroundCoords = getTextBackgroundCoords();
+        Graphics graphics = getGraphics();
+        graphics.setColor(BLACK);
+        graphics.fillRect(backgroundCoords[0], backgroundCoords[1], backgroundCoords[2], backgroundCoords[3]);
+    }
+
+    private int[] getTextBackgroundCoords() {
+        int backgroundY = BOARD_SIZE / 4;
+        int backgroundHeight = BOARD_SIZE - 2 * backgroundY;
+        return new int[] { 0, backgroundY, BOARD_SIZE, backgroundHeight };
+    }
+
+    private void drawText(String text) {
+        Graphics graphics = getGraphics();
+        graphics.setColor(WHITE);
+        graphics.setFont(getTextFont());
+        graphics.drawString(text, getTextX(), getTextY());
+    }
+
+    private Font getTextFont() {
+        return new Font(MONOSPACED, BOLD, 17);
+    }
+
+    private int getTextY() {
+        return BOARD_SIZE / 3;
+    }
+
+    private int getTextX() {
+        return BOARD_SIZE / 5;
     }
 
 }

@@ -25,8 +25,7 @@ import java.util.List;
 
 import static com.drofff.checkers.client.enums.BoardSide.BLACK;
 import static com.drofff.checkers.client.enums.BoardSide.oppositeSide;
-import static com.drofff.checkers.client.enums.MessageType.INITIAL;
-import static com.drofff.checkers.client.enums.MessageType.UPDATE;
+import static com.drofff.checkers.client.enums.MessageType.*;
 import static reactor.core.publisher.Mono.error;
 
 public class CheckersGame {
@@ -39,6 +38,7 @@ public class CheckersGame {
     private final PieceService pieceService;
 
     private Board2D gameBoard;
+    private MovementManager movementManager;
 
     public CheckersGame(RSocketRequester rSocketRequester, MessageProcessor messageProcessor) {
         this.rSocketRequester = rSocketRequester;
@@ -92,6 +92,8 @@ public class CheckersGame {
             initSession(sessionMessage);
         } else if(sessionMessageType == UPDATE) {
             displaySessionUpdate(sessionMessage);
+        } else if(sessionMessageType == FINISH) {
+            displayFinishMessage(sessionMessage);
         }
     }
 
@@ -103,7 +105,7 @@ public class CheckersGame {
     }
 
     private void registerPieceStepListenerForBoardSide(BoardSide boardSide) {
-        MovementManager movementManager = new MovementManager(pieceService, boardSide, gameBoard);
+        movementManager = new MovementManager(pieceService, boardSide, gameBoard);
         gameBoard.addMouseListener(movementManager);
     }
 
@@ -152,6 +154,12 @@ public class CheckersGame {
     private Step getCorrectedStep(SessionMessage sessionMessage) {
         Step step = sessionMessage.getStep();
         return sessionMessage.getUserSide() == BLACK ? step.inverse() : step;
+    }
+
+    private void displayFinishMessage(SessionMessage sessionMessage) {
+        gameBoard.removeMouseListener(movementManager);
+        String text = sessionMessage.getMessageText();
+        gameBoard.displayText(text);
     }
 
 }

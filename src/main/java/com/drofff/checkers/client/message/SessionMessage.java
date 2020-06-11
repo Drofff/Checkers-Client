@@ -52,4 +52,8 @@ public class SessionMessage implements Message {
         return JsonUtils.parseValueOfClassFromJson(Step.class, stepJson);
     }
 
+    public String getMessageText() {
+        return payload.get("messageText");
+    }
+
 }
