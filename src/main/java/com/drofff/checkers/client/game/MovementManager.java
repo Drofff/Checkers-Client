@@ -4,6 +4,9 @@ import com.drofff.checkers.client.document.Piece;
 import com.drofff.checkers.client.document.Step;
 import com.drofff.checkers.client.enums.BoardSide;
 import com.drofff.checkers.client.game.graphics.Board2D;
+import com.drofff.checkers.client.service.GameStepService;
+import com.drofff.checkers.client.service.KingStepService;
+import com.drofff.checkers.client.service.ManStepService;
 import com.drofff.checkers.client.service.PieceService;
 import com.drofff.checkers.client.utils.BoardUtils;
 
@@ -12,11 +15,15 @@ import java.awt.event.MouseListener;
 import java.util.Optional;
 
 import static com.drofff.checkers.client.constants.BoardConstants.BORDER_WIDTH;
+import static com.drofff.checkers.client.utils.BoardUtils.adjustPositionToBoardSide;
 import static java.util.Objects.nonNull;
 
 public class MovementManager implements MouseListener {
 
     private final PieceService pieceService;
+    private final GameStepService kingStepService;
+    private final GameStepService manStepService;
+
     private final BoardSide userSide;
     private final Board2D gameBoard;
 
@@ -26,6 +33,8 @@ public class MovementManager implements MouseListener {
         this.pieceService = pieceService;
         this.userSide = userSide;
         this.gameBoard = gameBoard;
+        this.kingStepService = new KingStepService(userSide, pieceService);
+        this.manStepService = new ManStepService(userSide, pieceService);
     }
 
     @Override
@@ -33,7 +42,7 @@ public class MovementManager implements MouseListener {
         Piece.Position selectedSquare = getSelectedSquarePosition(mouseEvent);
         if(isSelectionOfPieceAtSquare(selectedSquare)) {
             selectSquare(selectedSquare);
-        } else if(isStepToSquare(selectedSquare) || isCaptureEndingAtSquare(selectedSquare)) {
+        } else if(isSelectionOfSquareAsDestination(selectedSquare)) {
             stepToSquare(selectedSquare);
         }
     }
@@ -50,7 +59,7 @@ public class MovementManager implements MouseListener {
     }
 
     private boolean isSelectionOfPieceAtSquare(Piece.Position square) {
-        Piece.Position correctPosition = correctPositionIfNeeded(square);
+        Piece.Position correctPosition = adjustPositionToBoardSide(square, userSide);
         Optional<BoardSide> pieceSideOptional = pieceService.getSideOfPieceAtPositionIfPresent(correctPosition);
         return pieceSideOptional.isPresent() && pieceSideOptional.get() == userSide;
     }
@@ -58,7 +67,7 @@ public class MovementManager implements MouseListener {
     private void selectSquare(Piece.Position square) {
         unselectPreviousOptionIfNeeded();
         fromSquare = square;
-        gameBoard.selectSquareAtBoardSide(square, userSide);
+        gameBoard.selectSquare(square);
     }
 
     private void unselectPreviousOptionIfNeeded() {
@@ -67,42 +76,9 @@ public class MovementManager implements MouseListener {
         }
     }
 
-    private boolean isStepToSquare(Piece.Position square) {
-        Piece.Position correctPosition = correctPositionIfNeeded(square);
-        return isValidMoveTo(correctPosition) && isAllowedStepTo(square);
-    }
-
-    private void stepToSquare(Piece.Position square) {
-        Piece.Position fromPosition = correctPositionIfNeeded(fromSquare);
-        Piece.Position toPosition = correctPositionIfNeeded(square);
-        pieceService.movePieceByStep(Step.of(fromPosition, toPosition));
-        gameBoard.movePieceAtBoardSide(fromSquare, square, userSide);
-        fromSquare = null;
-    }
-
-    private boolean isAllowedStepTo(Piece.Position destinationSquare) {
-        return hasAllowedStepRow(destinationSquare) && hasAllowedStepColumn(destinationSquare) &&
-                pieceService.isTurnOfCurrentUser();
-    }
-
-    private boolean hasAllowedStepRow(Piece.Position destinationSquare) {
-        int allowedRow = fromSquare.getRow() - 1;
-        return allowedRow == destinationSquare.getRow();
-    }
-
-    private boolean hasAllowedStepColumn(Piece.Position destinationSquare) {
-        int columnDiff = diff(destinationSquare.getColumn(), fromSquare.getColumn());
-        return columnDiff == 1;
-    }
-
-    private boolean isCaptureEndingAtSquare(Piece.Position square) {
-        Piece.Position correctPosition = correctPositionIfNeeded(square);
-        return pieceService.isTurnOfCurrentUser() && isValidMoveTo(correctPosition) &&
-                isValidCaptureMoveEndingAtSquare(square);
-    }
-
-    private boolean isValidMoveTo(Piece.Position square) {
-        return nonNull(fromSquare) && isEmptySquare(square);
+    private boolean isSelectionOfSquareAsDestination(Piece.Position square) {
+        Piece.Position correctSquare = adjustPositionToBoardSide(square, userSide);
+        return pieceService.isTurnOfCurrentUser() && nonNull(fromSquare) && isEmptySquare(correctSquare);
     }
 
     private boolean isEmptySquare(Piece.Position square) {
@@ -110,45 +86,39 @@ public class MovementManager implements MouseListener {
         return !boardSideOptional.isPresent();
     }
 
-    private boolean isValidCaptureMoveEndingAtSquare(Piece.Position square) {
-        return isAllowedCaptureMoveEndingAtSquare(square) &&
-                doesMoveToSquareCaptureOpponentPiece(square);
+    private void stepToSquare(Piece.Position square) {
+        if(isPieceAtFromSquareKing()) {
+            moveKingToSquare(square);
+        } else {
+            moveManToSquare(square);
+        }
     }
 
-    private boolean isAllowedCaptureMoveEndingAtSquare(Piece.Position position) {
-        int rowDiff = diff(position.getRow(), fromSquare.getRow());
-        int columnDiff = diff(position.getColumn(), fromSquare.getColumn());
-        return rowDiff == columnDiff && rowDiff == 2;
+    private boolean isPieceAtFromSquareKing() {
+        Piece.Position correctFromPosition = adjustPositionToBoardSide(fromSquare, userSide);
+        return pieceService.isPieceAtPositionKing(correctFromPosition);
     }
 
-    private int diff(int num0, int num1) {
-        return Math.abs(num0 - num1);
+    private void moveKingToSquare(Piece.Position square) {
+        if(kingStepService.canMovePieceFromTo(fromSquare, square)) {
+            gameBoard.moveKingAtBoardSide(fromSquare, square, userSide);
+            saveStepToSquare(square);
+            fromSquare = null;
+        }
     }
 
-    private boolean doesMoveToSquareCaptureOpponentPiece(Piece.Position toSquare) {
-        Piece.Position capturedPosition = getSquareBetweenFromAndTo(toSquare);
-        Piece.Position correctedPosition = correctPositionIfNeeded(capturedPosition);
-        return pieceService.getSideOfPieceAtPositionIfPresent(correctedPosition)
-                .filter(this::isSideOfOpponent)
-                .isPresent();
+    private void moveManToSquare(Piece.Position square) {
+        if(manStepService.canMovePieceFromTo(fromSquare, square)) {
+            gameBoard.moveManAtBoardSide(fromSquare, square, userSide);
+            saveStepToSquare(square);
+            fromSquare = null;
+        }
     }
 
-    private Piece.Position getSquareBetweenFromAndTo(Piece.Position toSquare) {
-        int columnBetween = avg(fromSquare.getColumn(), toSquare.getColumn());
-        int rowBetween = avg(fromSquare.getRow(), toSquare.getRow());
-        return new Piece.Position(columnBetween, rowBetween);
-    }
-
-    private int avg(int num0, int num1) {
-        return ( num0 + num1 ) / 2;
-    }
-
-    private Piece.Position correctPositionIfNeeded(Piece.Position position) {
-        return userSide == BoardSide.BLACK ? position.inverse() : position;
-    }
-
-    private boolean isSideOfOpponent(BoardSide side) {
-        return !userSide.equals(side);
+    private void saveStepToSquare(Piece.Position square) {
+        Piece.Position fromPosition = adjustPositionToBoardSide(fromSquare, userSide);
+        Piece.Position toPosition = adjustPositionToBoardSide(square, userSide);
+        pieceService.movePieceByStep(Step.of(fromPosition, toPosition));
     }
 
     @Override

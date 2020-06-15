@@ -52,6 +52,11 @@ public class SessionMessage implements Message {
         return JsonUtils.parseValueOfClassFromJson(Step.class, stepJson);
     }
 
+    public Boolean movedKing() {
+        String movedKingStr = payload.get("isKing");
+        return Boolean.valueOf(movedKingStr);
+    }
+
     public String getMessageText() {
         return payload.get("messageText");
     }

@@ -130,8 +130,7 @@ public class CheckersGame {
 
     private void displaySessionUpdate(SessionMessage sessionMessage) {
         if(isNotRemovalMessage(sessionMessage)) {
-            Step step = getRelativeStepFromMessage(sessionMessage);
-            gameBoard.movePieceAtBoardSide(step.getFromPosition(), step.getToPosition(), sessionMessage.getUserSide());
+            movePieceDueToSessionUpdate(sessionMessage);
         } else {
             Step correctedStep = getCorrectedStep(sessionMessage);
             gameBoard.clearSquareAtPosition(correctedStep.getFromPosition());
@@ -144,6 +143,17 @@ public class CheckersGame {
 
     private boolean isRemovalMessage(SessionMessage sessionMessage) {
         return sessionMessage.getStep().isRemoval();
+    }
+
+    private void movePieceDueToSessionUpdate(SessionMessage sessionMessage) {
+        Step relativeStep = getRelativeStepFromMessage(sessionMessage);
+        if(sessionMessage.movedKing()) {
+            gameBoard.moveKingAtBoardSide(relativeStep.getFromPosition(), relativeStep.getToPosition(),
+                    sessionMessage.getUserSide());
+        } else {
+            gameBoard.moveManAtBoardSide(relativeStep.getFromPosition(), relativeStep.getToPosition(),
+                    sessionMessage.getUserSide());
+        }
     }
 
     private Step getRelativeStepFromMessage(SessionMessage sessionMessage) {

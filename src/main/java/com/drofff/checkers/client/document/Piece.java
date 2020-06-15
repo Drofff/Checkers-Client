@@ -88,6 +88,10 @@ public class Piece {
             return maxPos - pos;
         }
 
+        public boolean isAtOpponentEnd() {
+            return row == 0;
+        }
+
     }
 
 }

@@ -10,7 +10,11 @@ public interface PieceService {
 
     Optional<BoardSide> getSideOfPieceAtPositionIfPresent(Piece.Position position);
 
+    Integer countOpponentPiecesBetweenPositions(Piece.Position fromPosition, Piece.Position toPosition);
+
     void movePieceByStep(Step step);
+
+    Boolean isPieceAtPositionKing(Piece.Position position);
 
     Boolean isTurnOfCurrentUser();
 

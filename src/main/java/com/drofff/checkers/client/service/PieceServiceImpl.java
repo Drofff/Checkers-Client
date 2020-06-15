@@ -24,14 +24,28 @@ public class PieceServiceImpl implements PieceService {
     }
 
     @Override
+    public Integer countOpponentPiecesBetweenPositions(Piece.Position fromPosition, Piece.Position toPosition) {
+        return rSocketRequester.route("count.opponentPieces.between")
+                .data(Step.of(fromPosition, toPosition))
+                .retrieveMono(Integer.class)
+                .block();
+    }
+
+    @Override
     public void movePieceByStep(Step step) {
         rSocketRequester.route("piece.step").data(step)
                 .send().subscribe();
     }
 
     @Override
+    public Boolean isPieceAtPositionKing(Piece.Position position) {
+        return rSocketRequester.route("piece.isKing").data(position)
+                .retrieveMono(Boolean.class).block();
+    }
+
+    @Override
     public Boolean isTurnOfCurrentUser() {
-        return rSocketRequester.route("isTurn")
+        return rSocketRequester.route("session.isTurn")
                 .retrieveMono(Boolean.class)
                 .block();
     }
