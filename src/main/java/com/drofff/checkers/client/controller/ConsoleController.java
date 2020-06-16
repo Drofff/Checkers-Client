@@ -1,11 +1,11 @@
 package com.drofff.checkers.client.controller;
 
-import com.drofff.checkers.client.configuration.properties.CheckersServerProperties;
 import com.drofff.checkers.client.document.Credentials;
 import com.drofff.checkers.client.game.CheckersGame;
 import com.drofff.checkers.client.service.AuthenticationService;
 import com.drofff.checkers.client.service.MessageProcessor;
 import io.rsocket.metadata.WellKnownMimeType;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.messaging.rsocket.RSocketRequester;
 import org.springframework.stereotype.Controller;
 import org.springframework.util.MimeType;
@@ -14,6 +14,7 @@ import reactor.core.publisher.Mono;
 
 import javax.annotation.PostConstruct;
 import java.io.FileNotFoundException;
+import java.net.URI;
 
 import static com.drofff.checkers.client.utils.ConsoleUtils.getUserInput;
 import static com.drofff.checkers.client.utils.ConsoleUtils.printStrMono;
@@ -27,14 +28,14 @@ public class ConsoleController {
 
     private final RSocketRequester.Builder requesterBuilder;
 
-    private final CheckersServerProperties checkersServerProperties;
+    private final String serverUrl;
 
     public ConsoleController(AuthenticationService authenticationService, MessageProcessor messageProcessor,
-                             RSocketRequester.Builder requesterBuilder, CheckersServerProperties checkersServerProperties) {
+                             RSocketRequester.Builder requesterBuilder, @Value("${checkers.server.url}") String serverUrl) {
         this.authenticationService = authenticationService;
         this.messageProcessor = messageProcessor;
         this.requesterBuilder = requesterBuilder;
-        this.checkersServerProperties = checkersServerProperties;
+        this.serverUrl = serverUrl;
     }
 
     @PostConstruct
@@ -71,8 +72,9 @@ public class ConsoleController {
     }
 
     private Mono<RSocketRequester> secureRSocketRequester(Credentials credentials) {
+        URI serverURI = URI.create(serverUrl);
         return requesterBuilder.setupMetadata(credentials.toUsernamePasswordMetadata(), getAuthMimeType())
-                .connectTcp(checkersServerProperties.getAddress(), checkersServerProperties.getPort());
+                .connectWebSocket(serverURI);
     }
 
     private MimeType getAuthMimeType() {
